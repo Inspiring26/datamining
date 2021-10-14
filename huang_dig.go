@@ -13,6 +13,8 @@ import (
 	"math/big"
 	"bytes"
 	"strings"
+	// "reflect"
+	// "syscall"
 )
 
 var (
@@ -23,46 +25,42 @@ var (
 
 func main(){
 	runtime.GOMAXPROCS(cpunum)
-	ch := make(chan string,cpunum)
+	ch := make(chan *[]byte,30)
 	wg := sync.WaitGroup{}
 	for i := 0; i < cpunum; i++{
 		go WgSortLogs(ch, &wg)	
 	}
 
-	var namebuffer bytes.Buffer
-	for i:=0; i<128;i++  {
-		namebuffer.Reset()
-		namebuffer.WriteString("./data/Treasure_")
-		namebuffer.WriteString(strconv.Itoa(i))
-		namebuffer.WriteString(".data")
 
-		ch <- namebuffer.String()
+	for i:=0; i<128;i++  {
+
+		fmt.Println("./data/Treasure_"+strconv.Itoa(i)+".data")
+		file2,_ := ioutil.ReadFile("./data/Treasure_"+strconv.Itoa(i)+".data")
+		ch <- &file2
 		wg.Add(1)
 	}
 	wg.Wait()
 	close(ch)
-
-	// ReadFile("./data/Treasure_t0.data")
 }
 
-func WgSortLogs(ch chan string,wg *sync.WaitGroup){
+func WgSortLogs(ch chan *[]byte,wg *sync.WaitGroup){
 	for true{
 		tmp,ok := <-ch
 		if !ok{
 			break
 		}
-		fmt.Println(tmp)
-		ReadFile(tmp)
+		// fmt.Println(reflect.TypeOf(tmp))
+		ReadFile(*tmp)
 		wg.Done()
 	}
 }
 
-func ReadFile(fname string){
-	file1,_ := ioutil.ReadFile(fname) 
+func ReadFile(fname []byte){
+
 	status := 1
 	big1024 := big.NewInt(1024)
 	var buffer bytes.Buffer
-	sp := strings.Split(string(file1),"\n")
+	sp := strings.Split(string(fname),"\n")
 
 	for _,line := range sp[:len(sp)-1]{//优化 这要切片影响效率
 		big2,_ :=  new(big.Int).SetString(line[90:len(line)-2], 10)
@@ -93,9 +91,9 @@ func ReadFile(fname string){
 		bigrem := big.NewInt(0)
 		bigrem.Rem(big1,big1024)
 		status *= bigrem.Cmp(big2)
-		// fmt.Println(bigrem.Cmp(big2))
 		if status==0{
 			// fmt.Println(big2)
 		}
 	}
+	fname=nil
 }
